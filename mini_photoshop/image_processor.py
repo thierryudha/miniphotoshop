@@ -72,9 +72,14 @@ def resize_to_fit(image: np.ndarray, max_width: int, max_height: int) -> Tuple[n
 def adjust_brightness_contrast(image: np.ndarray, brightness: int = 0, contrast: int = 0) -> np.ndarray:
     """Adjust brightness and contrast using alpha-beta linear transform."""
 
+    # Use a linear transform in float space and clamp, avoiding absolute-value
+    # behavior from `convertScaleAbs` which can produce unexpected brightening
+    # for negative results. Convert to float, apply scale and shift, then
+    # clamp to uint8 range.
     alpha = 1.0 + (contrast / 100.0)
-    beta = brightness
-    return cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+    beta = float(brightness)
+    scaled = image.astype(np.float32) * float(alpha) + beta
+    return ensure_uint8(scaled)
 
 
 def equalize_histogram(image: np.ndarray) -> np.ndarray:
@@ -276,9 +281,9 @@ def region_based_segmentation(image: np.ndarray, k: int = 3) -> np.ndarray:
     k = int(np.clip(k, 2, 8))
     data = image.reshape((-1, 3)).astype(np.float32)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
-    _compactness, labels, centers = cv2.kmeans(data, k, None, criteria, 3, cv2.KMEANS_PP_CENTERS)
+    _compactness, labels, centers = cv2.kmeans(data, k, None, criteria, 3, cv2.KMEANS_PP_CENTERS) # type: ignore
     centers = np.uint8(centers)
-    segmented = centers[labels.flatten()].reshape(image.shape)
+    segmented = centers[labels.flatten()].reshape(image.shape) # type: ignore
     return segmented
 
 
@@ -289,7 +294,7 @@ def simulate_jpeg(image: np.ndarray, quality: int = 50) -> np.ndarray:
     if not ok:
         raise ValueError("Gagal melakukan simulasi kompresi JPEG.")
     decoded_bgr = cv2.imdecode(encoded, cv2.IMREAD_COLOR)
-    return cv2.cvtColor(decoded_bgr, cv2.COLOR_BGR2RGB)
+    return cv2.cvtColor(decoded_bgr, cv2.COLOR_BGR2RGB) # type: ignore
 
 
 def quantize_colors(image: np.ndarray, levels: int = 4) -> np.ndarray:
