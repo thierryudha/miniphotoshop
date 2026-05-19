@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Literal, Optional, cast
 
 import numpy as np
 from PIL import Image, ImageFile, ImageTk
@@ -463,7 +463,7 @@ class MiniPhotoshopApp(tk.Tk):
                 "Binary & Edge",
                 "Operasi morfologi biner dengan structuring element yang dapat diatur.",
                 (C("operation", "Operasi", kind="combo", default="erosion", options=("erosion", "dilation")), C("kernel", "Kernel", default=3, minimum=1, maximum=25), C("iterations", "Iterations", default=1, minimum=1, maximum=10)),
-                lambda img, p: ip.morphology(img, str(p["operation"]), int(p["kernel"]), int(p["iterations"])),
+                lambda img, p: ip.morphology(img, cast(Literal["erosion", "dilation"], p["operation"]), int(p["kernel"]), int(p["iterations"])),
                 presets={"Ringan": {"kernel": 3, "iterations": 1}, "Sedang": {"kernel": 5, "iterations": 2}, "Kuat": {"kernel": 9, "iterations": 4}},
             ),
             FeatureSpec(
@@ -472,7 +472,7 @@ class MiniPhotoshopApp(tk.Tk):
                 "Color",
                 "Tampilkan salah satu channel warna R, G, atau B.",
                 (C("channel", "Channel", kind="combo", default="R", options=("R", "G", "B")),),
-                lambda img, p: ip.split_channel(img, str(p["channel"])),
+                lambda img, p: ip.split_channel(img, cast(Literal["R", "G", "B"], p["channel"])),
             ),
             FeatureSpec(
                 "hue_saturation",
@@ -498,10 +498,10 @@ class MiniPhotoshopApp(tk.Tk):
                 "Region-based / K-Means",
                 "Segmentation",
                 "Clustering warna sederhana untuk ekstraksi region.",
-                (C("k", "Jumlah Region K", default=3, minimum=2, maximum=8),),
+                (C("k", "Jumlah Region K", default=3, minimum=2, maximum=32),),
                 lambda img, p: ip.region_based_segmentation(img, int(p["k"])),
                 live=False,
-                presets={"Ringan": {"k": 2}, "Sedang": {"k": 4}, "Kuat": {"k": 8}},
+                presets={"Ringan": {"k": 2}, "Sedang": {"k": 8}, "Kuat": {"k": 16}},
             ),
             FeatureSpec(
                 "jpeg_simulation",
@@ -545,7 +545,7 @@ class MiniPhotoshopApp(tk.Tk):
         h, w = image.shape[:2]
         new_w = max(1, int(round(w * float(params["width_pct"]) / 100.0)))
         new_h = max(1, int(round(h * float(params["height_pct"]) / 100.0)))
-        return ip.resize_image(image, new_w, new_h, self.interpolation_var.get())
+        return ip.resize_image(image, new_w, new_h, self._selected_interpolation())
 
     def _process_affine(self, image: np.ndarray, params: dict[str, Any]) -> np.ndarray:
         return ip.affine_transform(
@@ -554,8 +554,14 @@ class MiniPhotoshopApp(tk.Tk):
             scale=float(params["scale_pct"]) / 100.0,
             translate_x=int(params["tx"]),
             translate_y=int(params["ty"]),
-            interpolation=self.interpolation_var.get(),
+            interpolation=self._selected_interpolation(),
         )
+
+    def _selected_interpolation(self) -> ip.InterpolationName:
+        interpolation = self.interpolation_var.get()
+        if interpolation not in ("nearest", "bilinear"):
+            return "bilinear"
+        return cast(ip.InterpolationName, interpolation)
 
     def _process_rle_ratio(self, image: np.ndarray, _params: dict[str, Any]) -> tuple[np.ndarray, str]:
         ratio = ip.rle_compression_ratio(image)

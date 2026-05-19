@@ -11,7 +11,7 @@ const state = {
   objectUrls: [],
   cropStart: null,
   cropEnd: null,
-  cropDragging: false,
+  cropSelecting: false,
 };
 
 const el = (id) => document.getElementById(id);
@@ -365,6 +365,7 @@ function drawCropBox() {
 function hideCropBox() {
   state.cropStart = null;
   state.cropEnd = null;
+  state.cropSelecting = false;
   cropBox.classList.add('hidden');
 }
 
@@ -521,20 +522,21 @@ el('closeCnn').addEventListener('click', () => el('cnnDialog').close());
 
 afterStage.addEventListener('pointerdown', (event) => {
   if (!currentBlob() || !afterImage.src) return;
-  state.cropDragging = true;
-  state.cropStart = pointOnImage(event);
-  state.cropEnd = state.cropStart;
+  const point = pointOnImage(event);
+  state.cropSelecting = true;
+  state.cropStart = point;
+  state.cropEnd = point;
   drawCropBox();
 });
 afterStage.addEventListener('pointermove', (event) => {
-  if (!state.cropDragging) return;
+  if (!state.cropSelecting) return;
   state.cropEnd = pointOnImage(event);
   drawCropBox();
 });
 window.addEventListener('pointerup', (event) => {
-  if (!state.cropDragging) return;
-  state.cropDragging = false;
+  if (!state.cropSelecting) return;
   state.cropEnd = pointOnImage(event);
+  state.cropSelecting = false;
   drawCropBox();
 });
 

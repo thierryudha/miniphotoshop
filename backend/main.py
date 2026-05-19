@@ -10,7 +10,7 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast, Literal
 from urllib.parse import quote
 
 import numpy as np
@@ -273,9 +273,9 @@ FEATURES: list[Feature] = [
         "Region-based / K-Means",
         "Segmentation",
         "Clustering warna sederhana untuk ekstraksi region.",
-        [_control("k", "Jumlah Region K", default=3, minimum=2, maximum=8)],
+        [_control("k", "Jumlah Region K", default=3, minimum=2, maximum=32)],
         live=False,
-        presets={"Ringan": {"k": 2}, "Sedang": {"k": 4}, "Kuat": {"k": 8}},
+        presets={"Ringan": {"k": 2}, "Sedang": {"k": 8}, "Kuat": {"k": 16}},
     ),
     _feature(
         "jpeg_simulation",
@@ -380,8 +380,8 @@ PROCESSORS: dict[str, Processor] = {
     "noise_removal": lambda img, p: (ip.remove_salt_pepper(img, _as_int(p, "kernel", 3)), "Salt & pepper removal selesai."),
     "threshold": lambda img, p: (ip.threshold_binary(img, _as_int(p, "threshold", 127), _as_bool(p, "invert")), "Threshold binary selesai."),
     "edge_detection": lambda img, p: (ip.edge_detection(img, str(p.get("method", "Canny")), _as_int(p, "canny_low", 80), _as_int(p, "canny_high", 160), _as_int(p, "kernel", 3), _as_float(p, "sigma", 0.0)), "Edge detection selesai."),
-    "morphology": lambda img, p: (ip.morphology(img, str(p.get("operation", "erosion")), _as_int(p, "kernel", 3), _as_int(p, "iterations", 1)), "Morphology selesai."),
-    "channel_split": lambda img, p: (ip.split_channel(img, str(p.get("channel", "R"))), "Channel splitting selesai."),
+    "morphology": lambda img, p: (ip.morphology(img, cast(Literal["erosion", "dilation"], p.get("operation", "erosion")), _as_int(p, "kernel", 3), _as_int(p, "iterations", 1)), "Morphology selesai."),
+    "channel_split": lambda img, p: (ip.split_channel(img, cast(Literal["R", "G", "B"], p.get("channel", "R"))), "Channel splitting selesai."),
     "hue_saturation": lambda img, p: (ip.adjust_hue_saturation(img, _as_int(p, "hue"), _as_int(p, "saturation")), "Hue / Saturation selesai."),
     "threshold_segmentation": lambda img, p: (ip.threshold_segmentation(img, _as_int(p, "threshold", 127)), "Threshold segmentation selesai."),
     "edge_segmentation": lambda img, _p: (ip.edge_based_segmentation(img), "Edge-based segmentation selesai."),

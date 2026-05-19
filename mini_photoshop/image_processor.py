@@ -278,7 +278,7 @@ def edge_based_segmentation(image: np.ndarray) -> np.ndarray:
 def region_based_segmentation(image: np.ndarray, k: int = 3) -> np.ndarray:
     """Simple region segmentation using k-means color clustering."""
 
-    k = int(np.clip(k, 2, 8))
+    k = int(np.clip(k, 2, 32))
     data = image.reshape((-1, 3)).astype(np.float32)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
     _compactness, labels, centers = cv2.kmeans(data, k, None, criteria, 3, cv2.KMEANS_PP_CENTERS) # type: ignore
