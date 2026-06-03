@@ -11,6 +11,68 @@
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 
+/* Light theme overrides */
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --panel-2: #f1f5f9;
+  --text: #0f172a;
+  --muted: #475569;
+  --border: #cbd5e1;
+  --accent: #0284c7;
+  --accent-strong: #0369a1;
+  --danger: #ea580c;
+  --shadow: 0 8px 30px rgba(2,6,23,0.06);
+}
+
+/* smooth transitions for theme changes */
+body, .sidebar, .preview-panel, .controls-panel, .topbar, .statusbar {
+  transition: background 220ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+/* Theme toggle switch */
+.theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: #172033;
+  border-radius: 12px;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  user-select: none;
+}
+.theme-switch input { display: none; }
+.theme-switch .track {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #0b1220;
+  position: relative;
+  border: 1px solid var(--border);
+}
+.theme-switch .thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--panel);
+  transition: left 140ms ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.theme-switch input:checked + .track {
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+}
+.theme-switch input:checked + .track .thumb {
+  left: 24px;
+}
+
+/* ensure the theme switch inherits current theme styles */
+.theme-switch { background: rgba(17, 24, 39, 0.88); }
+
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -139,4 +201,64 @@ input[type="checkbox"] { width: auto; }
   .preview-grid { grid-template-columns: 1fr; }
   .two-cols, .actions-grid, .save-box { grid-template-columns: 1fr; }
   .actions-grid button:nth-child(5) { grid-column: auto; }
+}
+
+/* Theme-aware overrides for UI elements (placed at end so they override earlier hardcoded colors) */
+.topbar {
+  background: var(--panel) !important;
+  border-bottom-color: var(--border) !important;
+}
+.theme-switch {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+.theme-switch .track { background: var(--panel-2) !important; border-color: var(--border) !important; }
+.theme-switch .thumb { background: var(--panel) !important; }
+
+button, .file-button {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+button:hover, .file-button:hover {
+  background: var(--panel-2) !important;
+  border-color: var(--accent) !important;
+}
+
+input, select {
+  background: var(--panel-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.image-card {
+  background: var(--panel-2) !important;
+  border-color: var(--border) !important;
+}
+.card-title {
+  background: var(--panel-2) !important;
+  color: var(--muted) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+.value-pill {
+  background: var(--panel-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.statusbar {
+  background: var(--panel) !important;
+  border-top-color: var(--border) !important;
+}
+
+.sidebar, .preview-panel, .controls-panel {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+}
+
+.crop-box {
+  border-color: var(--accent) !important;
+  background: rgba(56, 189, 248, 0.12) !important;
 }

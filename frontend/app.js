@@ -73,6 +73,31 @@ function updateImages() {
   updateButtons();
 }
 
+// Theme helpers: apply theme and initialize from localStorage / prefers-color-scheme
+function applyTheme(theme) {
+  if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  else document.documentElement.removeAttribute('data-theme');
+  const toggle = el('themeToggle');
+  if (toggle) toggle.checked = (theme === 'light');
+  try { localStorage.setItem('theme', theme); } catch (e) { /* ignore */ }
+}
+
+function initTheme() {
+  // safe read from localStorage
+  let saved = null;
+  try { saved = localStorage.getItem('theme'); } catch (e) { /* ignore */ }
+  let theme;
+  if (saved === 'light' || saved === 'dark') theme = saved;
+  else theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  applyTheme(theme);
+  // attach listener to toggle if it exists now
+  const toggle = el('themeToggle');
+  if (toggle) toggle.addEventListener('change', (e) => applyTheme(e.target.checked ? 'light' : 'dark'));
+}
+
+// initialize theme early, before wiring other UI listeners
+initTheme();
+
 function groupByCategory(features) {
   return features.reduce((groups, feature) => {
     if (!groups.has(feature.category)) groups.set(feature.category, []);

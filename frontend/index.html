@@ -14,10 +14,15 @@
       <h1>Mini Photoshop Web</h1>
     </div>
     <div class="toolbar">
+      <label class="theme-switch" title="Toggle light / dark">
+        <input id="themeToggle" type="checkbox" />
+        <span class="track"><span class="thumb"></span></span>
+      </label>
       <label class="file-button">
         <input id="fileInput" type="file" accept="image/*" />
         Load Image
       </label>
+      <!-- Theme toggle -->
       <button id="saveBtn" type="button">Save</button>
       <button id="undoBtn" type="button">Undo</button>
       <button id="redoBtn" type="button">Redo</button>
@@ -25,6 +30,7 @@
       <button id="histBtn" type="button">Histogram</button>
       <button id="cnnBtn" type="button">CNN</button>
     </div>
+    
   </header>
 
   <main class="workspace">
