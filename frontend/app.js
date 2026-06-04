@@ -444,8 +444,10 @@ function drawHistogram(before, after) {
     ctx.lineTo(canvas.width - 20, y);
     ctx.stroke();
   }
-  const keys = ['gray', 'R', 'G', 'B'];
-  const colors = { gray: '#e5e7eb', R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
+  // const keys = ['gray', 'R', 'G', 'B'];
+  // const colors = { gray: '#e5e7eb', R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
+  const keys = ['R', 'G', 'B'];
+  const colors = { R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
   const areas = [
     { data: before.histograms, label: 'Before', top: 35, height: 205 },
     { data: after.histograms, label: 'After', top: 290, height: 205 },
