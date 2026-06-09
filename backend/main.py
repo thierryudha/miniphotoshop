@@ -293,7 +293,7 @@ FEATURES: list[Feature] = [
         [_control("levels", "Levels", default=8, minimum=2, maximum=32)],
         presets={"Ringan": {"levels": 16}, "Sedang": {"levels": 8}, "Kuat": {"levels": 4}},
     ),
-    _feature("rle_ratio", "RLE Compression Ratio", "Compression", "Hitung estimasi rasio kompresi RLE pada citra grayscale.", live=False),
+    _feature("rle_ratio", "RLE Compression Ratio", "Compression", "Hitung estimasi rasio kompresi RLE pada citra grayscale.", live=True),
     _feature("cnn_recognition", "CNN Object Recognition", "Machine Learning", "Klasifikasi objek opsional memakai model CNN ImageNet.", live=False),
 ]
 
@@ -413,7 +413,31 @@ async def _read_image(upload: UploadFile) -> np.ndarray:
     try:
         with Image.open(io.BytesIO(data)) as pil:
             pil.load()
-            return np.asarray(pil.convert("RGB"), dtype=np.uint8).copy()
+            # Handle RGBA explicitly if present, otherwise default to RGB
+            mode = "RGBA" if pil.mode == "RGBA" else "RGB"
+            arr = np.asarray(pil.convert(mode), dtype=np.uint8).copy()
+            print(f"[DEBUG] _read_image - mode: {pil.mode}, shape: {arr.shape}, ndim: {arr.ndim}, dtype: {arr.dtype}")
+            return arr
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Gagal membaca gambar: {exc}") from exc
+
+
+async def _read_histogram_image(upload: UploadFile) -> np.ndarray:
+    data = await upload.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="File gambar kosong.")
+    try:
+        with Image.open(io.BytesIO(data)) as pil:
+            pil.load()
+            if pil.mode in {"1", "L", "I", "I;16", "F"}:
+                converted = pil.convert("L")
+            elif pil.mode == "RGBA":
+                converted = pil.convert("RGBA")
+            else:
+                converted = pil.convert("RGB")
+            arr = np.asarray(converted, dtype=np.uint8).copy()
+            print(f"[DEBUG] _read_histogram_image - mode: {pil.mode}, shape: {arr.shape}, ndim: {arr.ndim}, dtype: {arr.dtype}")
+            return arr
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Gagal membaca gambar: {exc}") from exc
 
@@ -506,10 +530,10 @@ async def export_image(
 
 @app.post("/api/histogram")
 async def histogram(image: UploadFile = File(...)) -> JSONResponse:
-    arr = await _read_image(image)
+    arr = await _read_histogram_image(image)
     hist = ip.compute_histograms(arr)
     as_lists = {name: values.astype(float).round(2).tolist() for name, values in hist.items()}
-    return JSONResponse({"width": int(arr.shape[1]), "height": int(arr.shape[0]), "histograms": as_lists})
+    return JSONResponse({"width": int(arr.shape[1]), "height": int(arr.shape[0]), "channels": list(as_lists), "histograms": as_lists})
 
 
 @app.post("/api/cnn")

@@ -1,3 +1,0 @@
-# Optional dependency for CNN Object Recognition (MobileNetV2 ImageNet).
-# Install this only if you want the ML value-add feature.
-tensorflow>=2.12

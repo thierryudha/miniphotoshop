@@ -185,6 +185,37 @@ input[type="checkbox"] { width: auto; }
 .modal::backdrop { background: rgba(0, 0, 0, 0.65); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
 .modal-head h2 { margin: 0; }
+.hist-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+}
+.hist-controls label { min-width: 220px; }
+.hist-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.hist-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  color: var(--text);
+  background: var(--panel-2);
+}
+.hist-legend i {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 999px;
+  display: inline-block;
+}
 .small-modal { width: min(560px, 95vw); }
 .cnn-output ol { padding-left: 1.35rem; }
 .cnn-output li { margin: 0.45rem 0; }

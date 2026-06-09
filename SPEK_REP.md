@@ -10,7 +10,7 @@ Ringkasan: saya memindai kode proyek dan menilai implementasi setiap fitur yang 
 - [x] Load image (JPG, PNG, BMP) — Implemented
   - Referensi: `mini_photoshop.app: open_image`, `backend/main.py: _read_image`
 - [x] Save image (custom filename & format) — Implemented
-  - Referensi: `mini_photoshop.app: save_image`, `_save_array_to_file`; backend `/api/export` mendukung PNG/JPEG/BMP/TIFF (quality untuk JPEG)
+  - Referensi: `mini_photoshop.app: save_image`, `_save_array_to_file`; desktop sekarang menyarankan default filename cerdas; backend `/api/export` mendukung custom filename via input frontend, mendukung PNG/JPEG/BMP/TIFF (quality untuk JPEG)
 - [x] Reset ke gambar awal — Implemented (`mini_photoshop.app: reset_to_original`)
 - [x] Input: file lokal — Implemented (file dialog)
 - [x] Output: file hasil edit — Implemented (file save / export)
@@ -64,8 +64,10 @@ Ringkasan: saya memindai kode proyek dan menilai implementasi setiap fitur yang 
   - Not implemented: eksplisit Huffman coding, Arithmetic coding, LZW — tidak ditemukan implementasi khusus untuk metode-metode tersebut.
 
 **9. Histogram Analysis (Tambahan penting)**
-- [x] Menampilkan histogram grayscale, RGB — Implemented (`compute_histograms` + `app.show_histogram`)
+- [x] Menampilkan histogram sesuai tipe channel gambar — Implemented (`compute_histograms` + `app.show_histogram`; RGB menampilkan R/G/B, grayscale hanya gray)
 - [x] Perbandingan histogram before–after — Implemented (`app.show_histogram` menggambar sebelum & sesudah dengan matplotlib)
+- [x] Filter channel histogram — Implemented (desktop `app.show_histogram`, web `frontend/app.js`/`frontend/index.html`; filter All/Gray/R/G/B)
+- [x] Histogram mengikuti pilihan Channel Splitting RGB — Implemented (default filter otomatis mengambil channel aktif R/G/B agar channel kosong tidak mendominasi grafik)
 
 **10. User Interface (GUI)**
 - [x] Menu toolbar (File, Edit, Filter, Transform) — Implemented (`_build_menu`, toolbar buttons)

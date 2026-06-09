@@ -12,6 +12,8 @@ const state = {
   cropStart: null,
   cropEnd: null,
   cropSelecting: false,
+  histogramBefore: null,
+  histogramAfter: null,
 };
 
 const el = (id) => document.getElementById(id);
@@ -157,6 +159,7 @@ function renderControls(feature) {
   if (!feature.controls.length) {
     const empty = document.createElement('p');
     empty.className = 'panel-heading';
+    empty.id = 'emptyControlsMsg';
     empty.textContent = 'Fitur ini tidak membutuhkan parameter tambahan.';
     controlsContainer.appendChild(empty);
     return;
@@ -272,6 +275,12 @@ async function processSelected(commit) {
     state.previewFeature = state.selectedFeature.key;
     updateImages();
     setStatus(message);
+    if (state.selectedFeature.key === 'rle_ratio') {
+      const msgEl = el('emptyControlsMsg');
+      if (msgEl) msgEl.innerHTML = `<span style="color:var(--accent);font-weight:bold;font-size:1.1rem;">${message}</span>`;
+      el('featureDesc').innerHTML = `<span style="color:var(--accent);font-weight:bold;">${message}</span>`;
+      if (!commit) alert(message);
+    }
     if (commit) commitPreview();
   } catch (error) {
     setStatus(error.message);
@@ -313,6 +322,7 @@ async function exportCurrent() {
   if (!blob) return;
   const form = new FormData();
   const format = el('saveFormat').value;
+  const customName = el('saveFilename').value || 'hasil-edit';
   form.append('image', blob, 'result.png');
   form.append('image_format', format);
   form.append('quality', el('jpegQuality').value || '90');
@@ -325,9 +335,9 @@ async function exportCurrent() {
   const suffix = format.toLowerCase().replace('jpeg', 'jpg');
   const a = document.createElement('a');
   a.href = blobUrl(outBlob);
-  a.download = `mini-photoshop-result.${suffix}`;
+  a.download = `${customName}.${suffix}`;
   a.click();
-  setStatus(`File diekspor sebagai ${format}.`);
+  setStatus(`File diekspor sebagai ${customName}.${suffix}`);
 }
 
 function undo() {
@@ -429,39 +439,106 @@ async function histogramFor(blob) {
   return response.json();
 }
 
-function drawHistogram(before, after) {
+const histogramColors = { gray: '#e5e7eb', R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
+const histogramLabels = { gray: 'Gray', R: 'R / Merah', G: 'G / Hijau', B: 'B / Biru' };
+
+function selectedHistogramChannel() {
+  if (state.selectedFeature?.key === 'channel_split') {
+    const channel = getParams().channel;
+    if (['R', 'G', 'B'].includes(channel)) return channel;
+  }
+  return 'all';
+}
+
+function histogramKeys(histograms, channel = 'all') {
+  const order = ['gray', 'R', 'G', 'B'];
+  if (channel === 'all') return order.filter((key) => Array.isArray(histograms[key]));
+  return Array.isArray(histograms[channel]) ? [channel] : [];
+}
+
+function updateHistogramLegend(keys) {
+  const legend = el('histLegend');
+  legend.innerHTML = keys.map((key) => (
+    `<span><i style="background:${histogramColors[key]}"></i>${histogramLabels[key] || key}</span>`
+  )).join('');
+}
+
+function drawHistogram(before, after, channel = el('histChannelSelect')?.value || 'all') {
   const canvas = el('histCanvas');
   const ctx = canvas.getContext('2d');
+  const plotLeft = 54;
+  const plotRight = canvas.width - 28;
+  const plotWidth = plotRight - plotLeft;
+  const intensityTicks = [0, 32, 64, 96, 128, 160, 192, 224, 255];
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#0b1220';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = '#334155';
   ctx.lineWidth = 1;
-  for (let i = 0; i <= 8; i++) {
-    const y = 30 + i * 55;
-    ctx.beginPath();
-    ctx.moveTo(40, y);
-    ctx.lineTo(canvas.width - 20, y);
-    ctx.stroke();
+  const keys = Array.from(new Set([
+    ...histogramKeys(before.histograms, channel),
+    ...histogramKeys(after.histograms, channel),
+  ]));
+  updateHistogramLegend(keys);
+  if (!keys.length) {
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillText('Channel histogram tidak tersedia.', 40, 60);
+    return;
   }
-  // const keys = ['gray', 'R', 'G', 'B'];
-  // const colors = { gray: '#e5e7eb', R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
-  const keys = ['R', 'G', 'B'];
-  const colors = { R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
   const areas = [
-    { data: before.histograms, label: 'Before', top: 35, height: 205 },
-    { data: after.histograms, label: 'After', top: 290, height: 205 },
+    { data: before.histograms, label: 'Before', top: 45, height: 205 },
+    { data: after.histograms, label: 'After', top: 315, height: 205 },
   ];
   for (const area of areas) {
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(area.label, 46, area.top - 12);
-    const max = Math.max(...Object.values(area.data).flat());
+    ctx.textAlign = 'left';
+    ctx.fillText(area.label, plotLeft + 6, area.top - 12);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = area.top + i * (area.height / 4);
+      ctx.beginPath();
+      ctx.moveTo(plotLeft, y);
+      ctx.lineTo(plotRight, y);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(plotLeft, area.top);
+    ctx.lineTo(plotLeft, area.top + area.height);
+    ctx.lineTo(plotRight, area.top + area.height);
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    for (const tick of intensityTicks) {
+      const x = plotLeft + (tick / 255) * plotWidth;
+      ctx.beginPath();
+      ctx.moveTo(x, area.top + area.height);
+      ctx.lineTo(x, area.top + area.height + 5);
+      ctx.stroke();
+      ctx.fillText(String(tick), x, area.top + area.height + 18);
+    }
+    ctx.fillText('Intensitas (0–255)', plotLeft + plotWidth / 2, area.top + area.height + 34);
+
+    const values = keys.flatMap((key) => area.data[key] || []);
+    const max = Math.max(1, ...values);
+    
+    // Y Axis Labels
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 4; i++) {
+      const val = Math.round(max - i * (max / 4));
+      const y = area.top + i * (area.height / 4);
+      ctx.fillText(val.toLocaleString(), plotLeft - 8, y + 4);
+    }
+
     for (const key of keys) {
       if (!area.data[key]) continue;
-      ctx.strokeStyle = colors[key];
+      ctx.strokeStyle = histogramColors[key];
       ctx.beginPath();
       area.data[key].forEach((value, i) => {
-        const x = 40 + (i / 255) * (canvas.width - 70);
+        const x = plotLeft + (i / 255) * plotWidth;
         const y = area.top + area.height - (value / max) * area.height;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -476,7 +553,11 @@ async function showHistogram() {
   try {
     setStatus('Mengambil histogram...');
     const [before, after] = await Promise.all([histogramFor(state.originalBlob), histogramFor(currentBlob())]);
-    drawHistogram(before, after);
+    state.histogramBefore = before;
+    state.histogramAfter = after;
+    el('histChannelSelect').value = selectedHistogramChannel();
+    el('histTotalPixels').textContent = `Total piksel gambar: ${(after.width * after.height).toLocaleString()}`;
+    drawHistogram(before, after, el('histChannelSelect').value);
     el('histDialog').showModal();
     setStatus('Histogram siap.');
   } catch (error) {
@@ -545,6 +626,11 @@ el('presetSelect').addEventListener('change', (event) => {
   scheduleLivePreview();
 });
 el('closeHist').addEventListener('click', () => el('histDialog').close());
+el('histChannelSelect').addEventListener('change', () => {
+  if (state.histogramBefore && state.histogramAfter) {
+    drawHistogram(state.histogramBefore, state.histogramAfter, el('histChannelSelect').value);
+  }
+});
 el('closeCnn').addEventListener('click', () => el('cnnDialog').close());
 
 afterStage.addEventListener('pointerdown', (event) => {

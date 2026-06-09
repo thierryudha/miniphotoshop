@@ -116,6 +116,7 @@ class MiniPhotoshopApp(tk.Tk):
         self.minsize(*MIN_WINDOW_SIZE)
 
         self.original_image: Optional[np.ndarray] = None
+        self.original_histogram_image: Optional[np.ndarray] = None
         self.base_image: Optional[np.ndarray] = None
         self.processed_image: Optional[np.ndarray] = None
         self.current_path: Optional[Path] = None
@@ -666,6 +667,18 @@ class MiniPhotoshopApp(tk.Tk):
     # ------------------------------------------------------------------
     # Image management
     # ------------------------------------------------------------------
+    @staticmethod
+    def _pil_to_histogram_array(pil: Image.Image) -> np.ndarray:
+        """Preserve grayscale-vs-color information for histogram analysis."""
+
+        if pil.mode in {"1", "L", "I", "I;16", "F"}:
+            converted = pil.convert("L")
+        elif pil.mode == "RGBA":
+            converted = pil.convert("RGBA")
+        else:
+            converted = pil.convert("RGB")
+        return np.asarray(converted, dtype=np.uint8).copy()
+
     def open_image(self) -> None:
         filename = filedialog.askopenfilename(
             title="Pilih gambar",
@@ -679,12 +692,14 @@ class MiniPhotoshopApp(tk.Tk):
         try:
             with Image.open(filename) as pil:
                 pil.load()
+                histogram_image = self._pil_to_histogram_array(pil)
                 image = np.asarray(pil.convert("RGB"), dtype=np.uint8).copy()
         except Exception as exc:  # pragma: no cover - UI error path
             messagebox.showerror("Gagal Membuka Gambar", str(exc))
             return
         self.current_path = Path(filename)
         self.original_image = image
+        self.original_histogram_image = histogram_image
         self.base_image = image.copy()
         self.processed_image = None
         pixel_count = int(image.shape[0] * image.shape[1])
@@ -706,8 +721,15 @@ class MiniPhotoshopApp(tk.Tk):
         if image is None:
             messagebox.showwarning("Tidak Ada Gambar", "Buka gambar terlebih dahulu.")
             return
+        
+        # Default filename based on current path or generic name
+        initial_name = "hasil_edit"
+        if self.current_path:
+            initial_name = f"{self.current_path.stem}_edit"
+
         filename = filedialog.asksaveasfilename(
             title="Simpan hasil edit",
+            initialfile=initial_name,
             defaultextension=".png",
             filetypes=(("PNG", "*.png"), ("JPEG", "*.jpg *.jpeg"), ("BMP", "*.bmp"), ("TIFF", "*.tif")),
         )
@@ -911,15 +933,42 @@ class MiniPhotoshopApp(tk.Tk):
     # ------------------------------------------------------------------
     # Histogram and ML
     # ------------------------------------------------------------------
+    def _default_histogram_channel(self) -> ip.HistogramChannel:
+        """Pick the initial histogram filter from the active feature context."""
+
+        if self.active_feature_key.get() == "channel_split":
+            channel_var = self.param_vars.get("channel")
+            channel = str(channel_var.get()) if channel_var is not None else ""
+            if channel in ("R", "G", "B"):
+                return cast(ip.HistogramChannel, channel)
+        return "all"
+
+    def _current_histogram_source(self) -> Optional[np.ndarray]:
+        """Return current image data with original alpha preserved when possible."""
+
+        current = self._current_result()
+        if current is None:
+            return None
+        if (
+            self.processed_image is None
+            and self.original_image is not None
+            and self.original_histogram_image is not None
+            and self.base_image is not None
+            and self.base_image.shape == self.original_image.shape
+            and np.array_equal(self.base_image, self.original_image)
+        ):
+            return self.original_histogram_image
+        return current
+
     def show_histogram(self) -> None:
-        if self.original_image is None or self._current_result() is None:
+        if self.original_image is None or self._current_histogram_source() is None:
             messagebox.showwarning("Histogram", "Buka gambar terlebih dahulu.")
             return
         from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
         from matplotlib.figure import Figure
 
-        before = self.original_image if self.show_original_before_var.get() else self.base_image
-        after = self._current_result()
+        before = self.original_histogram_image if self.show_original_before_var.get() else self.base_image
+        after = self._current_histogram_source()
         assert before is not None and after is not None
         before_hist = ip.compute_histograms(before)
         after_hist = ip.compute_histograms(after)
@@ -927,25 +976,57 @@ class MiniPhotoshopApp(tk.Tk):
         win = tk.Toplevel(self)
         win.title("Histogram Before vs After")
         win.geometry("900x620")
+
+        controls = ttk.Frame(win)
+        controls.pack(fill=tk.X, padx=10, pady=(10, 0))
+        ttk.Label(controls, text="Filter channel:").pack(side=tk.LEFT)
+        channel_var = tk.StringVar(value=self._default_histogram_channel())
+        channel_combo = ttk.Combobox(
+            controls,
+            textvariable=channel_var,
+            values=("all", "gray", "R", "G", "B"),
+            state="readonly",
+            width=10,
+        )
+        channel_combo.pack(side=tk.LEFT, padx=8)
+
         fig = Figure(figsize=(9, 6), dpi=100)
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
         xs = np.arange(256)
-        for name in ["gray", "R", "G", "B"]:
-            if name in before_hist:
-                ax1.plot(xs, before_hist[name], label=name)
-            if name in after_hist:
-                ax2.plot(xs, after_hist[name], label=name)
-        ax1.set_title("Before Histogram")
-        ax2.set_title("After Histogram")
-        ax1.set_xlim(0, 255)
-        ax2.set_xlim(0, 255)
-        ax1.legend(loc="upper right")
-        ax2.legend(loc="upper right")
-        fig.tight_layout()
         canvas = FigureCanvasTkAgg(fig, master=win)
-        canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+        colors = {"gray": "#e5e7eb", "R": "#ef4444", "G": "#22c55e", "B": "#38bdf8"}
+
+        def redraw_histogram(*_args: Any) -> None:
+            selected = cast(ip.HistogramChannel, channel_var.get())
+            before_keys = ip.select_histogram_channels(before_hist, selected)
+            after_keys = ip.select_histogram_channels(after_hist, selected)
+
+            ax1.clear()
+            ax2.clear()
+            for name in before_keys:
+                ax1.plot(xs, before_hist[name], label=name, color=colors.get(name))
+            for name in after_keys:
+                ax2.plot(xs, after_hist[name], label=name, color=colors.get(name))
+
+            ax1.set_title("Before Histogram")
+            ax2.set_title(f"After Histogram (Total: {after.shape[1] * after.shape[0]:,} px)")
+            for ax in (ax1, ax2):
+                ax.set_xlim(0, 255)
+                ax.set_xlabel("Intensitas")
+                ax.set_ylabel("Jumlah piksel")
+                ax.grid(alpha=0.2)
+                if ax.lines:
+                    ax.legend(loc="upper right")
+                else:
+                    ax.text(0.5, 0.5, "Channel tidak tersedia", transform=ax.transAxes, ha="center", va="center")
+            fig.tight_layout()
+            canvas.draw_idle()
+
+        channel_combo.bind("<<ComboboxSelected>>", redraw_histogram)
+        redraw_histogram()
 
     def recognize_object(self) -> None:
         image = self._current_result()

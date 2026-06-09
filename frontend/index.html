@@ -95,6 +95,10 @@
 
       <div class="save-box">
         <label>
+          Nama File
+          <input id="saveFilename" type="text" value="hasil-edit" placeholder="Nama file..." />
+        </label>
+        <label>
           Format Save
           <select id="saveFormat">
             <option value="PNG">PNG</option>
@@ -131,7 +135,21 @@
       <h2>Histogram Before vs After</h2>
       <button id="closeHist" type="button">Tutup</button>
     </div>
-    <canvas id="histCanvas" width="980" height="520"></canvas>
+    <div class="hist-controls">
+      <label>
+        Filter channel
+        <select id="histChannelSelect">
+          <option value="all">Semua channel terdeteksi</option>
+          <option value="gray">Grayscale</option>
+          <option value="R">R / Merah</option>
+          <option value="G">G / Hijau</option>
+          <option value="B">B / Biru</option>
+        </select>
+      </label>
+      <div id="histLegend" class="hist-legend" aria-label="Legend histogram"></div>
+      <div class="hist-info"><span id="histTotalPixels"></span></div>
+    </div>
+    <canvas id="histCanvas" width="980" height="580"></canvas>
   </dialog>
 
   <dialog id="cnnDialog" class="modal small-modal">
