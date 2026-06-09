@@ -431,8 +431,8 @@ async function histogramFor(blob) {
   return response.json();
 }
 
-const histogramColors = { gray: '#e5e7eb', R: '#ef4444', G: '#22c55e', B: '#38bdf8', A: '#c084fc' };
-const histogramLabels = { gray: 'Gray', R: 'R / Merah', G: 'G / Hijau', B: 'B / Biru', A: 'A / Alpha' };
+const histogramColors = { gray: '#e5e7eb', R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
+const histogramLabels = { gray: 'Gray', R: 'R / Merah', G: 'G / Hijau', B: 'B / Biru' };
 
 function selectedHistogramChannel() {
   if (state.selectedFeature?.key === 'channel_split') {
@@ -443,7 +443,7 @@ function selectedHistogramChannel() {
 }
 
 function histogramKeys(histograms, channel = 'all') {
-  const order = ['gray', 'R', 'G', 'B', 'A'];
+  const order = ['gray', 'R', 'G', 'B'];
   if (channel === 'all') return order.filter((key) => Array.isArray(histograms[key]));
   return Array.isArray(histograms[channel]) ? [channel] : [];
 }
@@ -458,6 +458,11 @@ function updateHistogramLegend(keys) {
 function drawHistogram(before, after, channel = el('histChannelSelect')?.value || 'all') {
   const canvas = el('histCanvas');
   const ctx = canvas.getContext('2d');
+  const plotLeft = 54;
+  const plotRight = canvas.width - 28;
+  const plotWidth = plotRight - plotLeft;
+  const intensityTicks = [0, 32, 64, 96, 128, 160, 192, 224, 255];
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#0b1220';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -475,20 +480,39 @@ function drawHistogram(before, after, channel = el('histChannelSelect')?.value |
   }
   const areas = [
     { data: before.histograms, label: 'Before', top: 45, height: 205 },
-    { data: after.histograms, label: 'After', top: 290, height: 205 },
+    { data: after.histograms, label: 'After', top: 315, height: 205 },
   ];
   for (const area of areas) {
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(area.label, 46, area.top - 12);
+    ctx.textAlign = 'left';
+    ctx.fillText(area.label, plotLeft + 6, area.top - 12);
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
       const y = area.top + i * (area.height / 4);
       ctx.beginPath();
-      ctx.moveTo(40, y);
-      ctx.lineTo(canvas.width - 20, y);
+      ctx.moveTo(plotLeft, y);
+      ctx.lineTo(plotRight, y);
       ctx.stroke();
     }
+    ctx.beginPath();
+    ctx.moveTo(plotLeft, area.top);
+    ctx.lineTo(plotLeft, area.top + area.height);
+    ctx.lineTo(plotRight, area.top + area.height);
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    for (const tick of intensityTicks) {
+      const x = plotLeft + (tick / 255) * plotWidth;
+      ctx.beginPath();
+      ctx.moveTo(x, area.top + area.height);
+      ctx.lineTo(x, area.top + area.height + 5);
+      ctx.stroke();
+      ctx.fillText(String(tick), x, area.top + area.height + 18);
+    }
+    ctx.fillText('Intensitas (0–255)', plotLeft + plotWidth / 2, area.top + area.height + 34);
+
     const values = keys.flatMap((key) => area.data[key] || []);
     const max = Math.max(1, ...values);
     for (const key of keys) {
@@ -496,7 +520,7 @@ function drawHistogram(before, after, channel = el('histChannelSelect')?.value |
       ctx.strokeStyle = histogramColors[key];
       ctx.beginPath();
       area.data[key].forEach((value, i) => {
-        const x = 40 + (i / 255) * (canvas.width - 70);
+        const x = plotLeft + (i / 255) * plotWidth;
         const y = area.top + area.height - (value / max) * area.height;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);

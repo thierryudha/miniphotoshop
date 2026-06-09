@@ -669,12 +669,10 @@ class MiniPhotoshopApp(tk.Tk):
     # ------------------------------------------------------------------
     @staticmethod
     def _pil_to_histogram_array(pil: Image.Image) -> np.ndarray:
-        """Preserve grayscale/RGBA channel information for histogram analysis."""
+        """Preserve grayscale-vs-color information for histogram analysis."""
 
         if pil.mode in {"1", "L", "I", "I;16", "F"}:
             converted = pil.convert("L")
-        elif "A" in pil.getbands():
-            converted = pil.convert("RGBA")
         else:
             converted = pil.convert("RGB")
         return np.asarray(converted, dtype=np.uint8).copy()
@@ -977,16 +975,11 @@ class MiniPhotoshopApp(tk.Tk):
         channel_combo = ttk.Combobox(
             controls,
             textvariable=channel_var,
-            values=("all", "gray", "R", "G", "B", "A"),
+            values=("all", "gray", "R", "G", "B"),
             state="readonly",
             width=10,
         )
         channel_combo.pack(side=tk.LEFT, padx=8)
-        ttk.Label(
-            controls,
-            text="Legend: gray=grayscale, R=merah, G=hijau, B=biru, A=alpha. Split channel otomatis memilih channel aktif.",
-            style="Muted.TLabel",
-        ).pack(side=tk.LEFT, padx=8)
 
         fig = Figure(figsize=(9, 6), dpi=100)
         ax1 = fig.add_subplot(211)
@@ -995,7 +988,7 @@ class MiniPhotoshopApp(tk.Tk):
         canvas = FigureCanvasTkAgg(fig, master=win)
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        colors = {"gray": "#e5e7eb", "R": "#ef4444", "G": "#22c55e", "B": "#38bdf8", "A": "#c084fc"}
+        colors = {"gray": "#e5e7eb", "R": "#ef4444", "G": "#22c55e", "B": "#38bdf8"}
 
         def redraw_histogram(*_args: Any) -> None:
             selected = cast(ip.HistogramChannel, channel_var.get())

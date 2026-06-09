@@ -427,8 +427,6 @@ async def _read_histogram_image(upload: UploadFile) -> np.ndarray:
             pil.load()
             if pil.mode in {"1", "L", "I", "I;16", "F"}:
                 converted = pil.convert("L")
-            elif "A" in pil.getbands():
-                converted = pil.convert("RGBA")
             else:
                 converted = pil.convert("RGB")
             return np.asarray(converted, dtype=np.uint8).copy()

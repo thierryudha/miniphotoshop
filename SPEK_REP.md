@@ -64,9 +64,9 @@ Ringkasan: saya memindai kode proyek dan menilai implementasi setiap fitur yang 
   - Not implemented: eksplisit Huffman coding, Arithmetic coding, LZW — tidak ditemukan implementasi khusus untuk metode-metode tersebut.
 
 **9. Histogram Analysis (Tambahan penting)**
-- [x] Menampilkan histogram sesuai tipe channel gambar — Implemented (`compute_histograms` + `app.show_histogram`; RGB/RGBA menampilkan R/G/B/A, grayscale hanya gray)
+- [x] Menampilkan histogram sesuai tipe channel gambar — Implemented (`compute_histograms` + `app.show_histogram`; RGB menampilkan R/G/B, grayscale hanya gray)
 - [x] Perbandingan histogram before–after — Implemented (`app.show_histogram` menggambar sebelum & sesudah dengan matplotlib)
-- [x] Legend dan filter channel histogram — Implemented (desktop `app.show_histogram`, web `frontend/app.js`/`frontend/index.html`; filter All/Gray/R/G/B/A)
+- [x] Filter channel histogram — Implemented (desktop `app.show_histogram`, web `frontend/app.js`/`frontend/index.html`; filter All/Gray/R/G/B)
 - [x] Histogram mengikuti pilihan Channel Splitting RGB — Implemented (default filter otomatis mengambil channel aktif R/G/B agar channel kosong tidak mendominasi grafik)
 
 **10. User Interface (GUI)**
