@@ -275,6 +275,35 @@ Transformasi dilakukan dengan perkalian matriks:
 
 `cv2.warpAffine` menerapkan matriks 2×3 ini ke setiap piksel gambar. Rotasi di OpenCV berlawanan dengan konvensi matematika biasa (positif = searah jarum jam) karena sumbu Y di coordinate system image terbalik.
 
+#### Flip Horizontal & Flip Vertical
+
+```python
+def flip_horizontal(image: np.ndarray) -> np.ndarray:
+    return cv2.flip(image, 1)
+
+def flip_vertical(image: np.ndarray) -> np.ndarray:
+    return cv2.flip(image, 0)
+```
+
+`cv2.flip` menerima parameter `flipCode`:
+- `flipCode = 1` → flip terhadap **sumbu Y** (kiri-kanan, mirror horizontal)
+- `flipCode = 0` → flip terhadap **sumbu X** (atas-bawah, mirror vertikal)
+- `flipCode = -1` → flip keduanya sekaligus
+
+**Rumus matematis:**
+
+Flip Horizontal — setiap piksel `(x, y)` dipetakan ke `(W-1-x, y)`:
+```
+g(x, y) = f(W - 1 - x, y)
+```
+
+Flip Vertical — setiap piksel `(x, y)` dipetakan ke `(x, H-1-y)`:
+```
+g(x, y) = f(x, H - 1 - y)
+```
+
+Ini adalah kasus khusus dari transformasi geometri yang bisa diekspresikan sebagai matriks refleksi. Berbeda dengan `affine_transform` yang menghitung matriks floating point dan perlu interpolasi, flip bisa dilakukan dengan **array indexing reversal** langsung — `image[:, ::-1]` untuk horizontal, `image[::-1, :]` untuk vertikal — sehingga lebih efisien. OpenCV melakukan hal yang sama secara internal.
+
 ---
 
 ### 4.5 Kategori Restoration — Reduksi Noise
@@ -295,6 +324,22 @@ g(x,y) = median{ f(x+i, y+j) }    untuk i,j ∈ [-K/2, K/2]
 Piksel output adalah **nilai tengah** dari semua piksel di window K×K setelah diurutkan. Ini bukan konvolusi linier — melainkan operasi statistik non-linear. Itulah mengapa median filter sangat efektif untuk **salt-and-pepper noise** (piksel yang tiba-tiba sangat terang atau gelap) — nilai ekstrem tidak mempengaruhi median, berbeda dengan rata-rata yang langsung terpengaruh outlier.
 
 **Perbandingan dengan Gaussian Blur:** Gaussian menghaluskan semua detail termasuk tepi, sementara median filter lebih baik dalam mempertahankan tepi sambil menghilangkan noise impuls.
+
+#### Salt & Pepper Removal
+
+```python
+def remove_salt_pepper(image: np.ndarray, ksize: int = 3) -> np.ndarray:
+    return median_filter(image, ksize=ksize)
+```
+
+Ini bukan fungsi baru — ini hanya **alias** dari `median_filter` dengan kernel default lebih kecil (3 vs 5). Secara matematis identik. Alasannya ada dua:
+
+1. **Semantik lebih jelas** — pemanggil kode tahu *tujuan* operasinya (remove salt & pepper), bukan hanya *mekanismenya* (median filter). Ini praktik baik dalam desain API.
+2. **Default berbeda** — untuk noise salt & pepper, kernel kecil (3×3) biasanya cukup dan lebih aman karena tidak merusak terlalu banyak detail. Kernel 5×5 dipakai kalau noise-nya parah.
+
+**Mengapa median filter adalah solusi terbaik untuk salt-and-pepper noise?**
+
+Salt-and-pepper noise = piksel yang nilainya tiba-tiba melompat ke 0 (pepper, hitam) atau 255 (salt, putih), tidak berkorelasi dengan tetangganya. Jika kamu pakai Gaussian blur, nilai ekstrem 0 atau 255 ini tetap ikut dihitung dalam rata-rata berbobot — sehingga noise tersebar ke tetangga. Dengan median, nilai 0 atau 255 tersebut akan selalu berada di posisi paling pinggir saat diurutkan, dan tidak akan pernah menjadi nilai tengah selama jumlah piksel noise dalam window tidak melebihi 50%.
 
 ---
 
@@ -514,6 +559,59 @@ Buat array kosong (hitam), lalu salin hanya satu channel. Hasilnya adalah gambar
 ---
 
 ### 4.8 Kategori Segmentation
+
+#### Threshold Segmentation
+
+```python
+def threshold_segmentation(image: np.ndarray, threshold: int = 127) -> np.ndarray:
+    gray = to_gray(image)
+    _, mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+    result = image.copy()
+    result[mask == 0] = [0, 0, 0]
+    return result
+```
+
+**Bedakan dengan `threshold_binary`!** Meskipun keduanya pakai threshold, tujuan dan hasilnya berbeda:
+
+| | `threshold_binary` | `threshold_segmentation` |
+|---|---|---|
+| Kategori | Binary & Edge | Segmentation |
+| Output | Gambar hitam-putih murni | Gambar **berwarna** dengan background dihapus |
+| Cara kerja | Setiap piksel → 0 atau 255 | Piksel gelap → hitam, piksel terang → **warna aslinya tetap** |
+
+**Rumus / alur:**
+```
+mask(x,y) = 255   jika gray(x,y) > T     → piksel "foreground"
+             0     jika gray(x,y) ≤ T     → piksel "background"
+
+result(x,y) = image(x,y)   jika mask(x,y) == 255
+              [0, 0, 0]     jika mask(x,y) == 0
+```
+
+`result[mask == 0] = [0, 0, 0]` adalah **boolean indexing NumPy** — semua piksel di mana mask bernilai 0 langsung di-set ke hitam dalam satu operasi vektor tanpa loop. Ini jauh lebih efisien dibanding iterasi per piksel.
+
+Pendekatan ini sangat sederhana dan hanya efektif untuk gambar dengan kontras tinggi antara objek dan background (misalnya dokumen teks di atas kertas putih, atau objek terang di background gelap).
+
+#### Edge-based Segmentation
+
+```python
+def edge_based_segmentation(image: np.ndarray) -> np.ndarray:
+    edges = to_gray(edge_detection(image, "Canny"))
+    result = image.copy()
+    result[edges > 0] = [255, 0, 0]
+    return result
+```
+
+**Rumus / alur:**
+1. Jalankan Canny edge detection → hasilkan grayscale edge map (piksel tepi = 255, bukan tepi = 0)
+2. Copy gambar asli
+3. Di semua posisi yang terdeteksi sebagai tepi, **timpa warna dengan merah [255, 0, 0]**
+
+Hasilnya adalah gambar asli yang **batas-batas objeknya ditandai warna merah**. Ini bukan segmentasi sejati (tidak memisahkan region), melainkan **visualisasi batas region** menggunakan tepi sebagai penanda.
+
+Segmentasi berbasis tepi yang sesungguhnya akan melanjutkan langkah ini dengan operasi seperti *watershed* atau *flood fill* untuk mengisi area di dalam batas tepi — tapi project ini hanya mengimplementasikan langkah penandaan tepinya saja.
+
+`result[edges > 0] = [255, 0, 0]` — lagi-lagi boolean indexing NumPy, kali ini memilih semua piksel di mana nilai edge map > 0.
 
 #### K-Means Region Segmentation
 
