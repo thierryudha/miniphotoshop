@@ -280,14 +280,36 @@ def threshold_segmentation(image: np.ndarray, threshold: int = 127) -> np.ndarra
     gray = to_gray(image)
     _, mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
     result = image.copy()
-    result[mask == 0] = [0, 0, 0]
+    
+    # Create a fill color (black) matching the image channel count
+    if image.ndim == 3:
+        fill_color = [0] * image.shape[2]
+        # For RGBA, we might want to keep it opaque or transparent. 
+        # Here we follow [0,0,0] which usually implies opaque black in 3-channel.
+        # In 4-channel, [0,0,0,255] is opaque black.
+        if image.shape[2] == 4:
+            fill_color[3] = 255
+    else:
+        fill_color = 0
+
+    result[mask == 0] = fill_color
     return result
 
 
 def edge_based_segmentation(image: np.ndarray) -> np.ndarray:
     edges = to_gray(edge_detection(image, "Canny"))
     result = image.copy()
-    result[edges > 0] = [255, 0, 0]
+    
+    # Create a fill color (red) matching the image channel count
+    if image.ndim == 3:
+        fill_color = [0] * image.shape[2]
+        fill_color[0] = 255 # Red
+        if image.shape[2] == 4:
+            fill_color[3] = 255 # Opaque
+    else:
+        fill_color = 255
+
+    result[edges > 0] = fill_color
     return result
 
 
@@ -295,7 +317,8 @@ def region_based_segmentation(image: np.ndarray, k: int = 3) -> np.ndarray:
     """Simple region segmentation using k-means color clustering."""
 
     k = int(np.clip(k, 2, 32))
-    data = image.reshape((-1, 3)).astype(np.float32)
+    channels = image.shape[2] if image.ndim == 3 else 1
+    data = image.reshape((-1, channels)).astype(np.float32)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
     _compactness, labels, centers = cv2.kmeans(data, k, None, criteria, 3, cv2.KMEANS_PP_CENTERS) # type: ignore
     centers = np.uint8(centers)
