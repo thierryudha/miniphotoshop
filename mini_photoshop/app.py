@@ -673,6 +673,8 @@ class MiniPhotoshopApp(tk.Tk):
 
         if pil.mode in {"1", "L", "I", "I;16", "F"}:
             converted = pil.convert("L")
+        elif pil.mode == "RGBA":
+            converted = pil.convert("RGBA")
         else:
             converted = pil.convert("RGB")
         return np.asarray(converted, dtype=np.uint8).copy()

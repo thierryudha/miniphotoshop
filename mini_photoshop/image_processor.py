@@ -41,14 +41,29 @@ def ensure_uint8(image: np.ndarray) -> np.ndarray:
 
 
 def to_gray(image: np.ndarray) -> np.ndarray:
+    print(f"[DEBUG] to_gray input - shape: {image.shape}, ndim: {image.ndim}, dtype: {image.dtype}")
     if image.ndim == 2:
         return image
+    
+    channels = image.shape[2]
+    if channels == 4:
+        return cv2.cvtColor(image, cv2.COLOR_RGBA2GRAY)
+    if channels == 1:
+        return image[:, :, 0]
+    
     return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
 
 def gray_to_rgb(gray: np.ndarray) -> np.ndarray:
+    print(f"[DEBUG] gray_to_rgb input - shape: {gray.shape}, ndim: {gray.ndim}, dtype: {gray.dtype}")
     if gray.ndim == 3:
-        return gray
+        if gray.shape[2] == 3:
+            return gray
+        if gray.shape[2] == 4:
+            return cv2.cvtColor(gray, cv2.COLOR_RGBA2RGB)
+        if gray.shape[2] == 1:
+            gray = gray[:, :, 0]
+            
     return cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
 
 
