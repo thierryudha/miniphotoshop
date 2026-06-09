@@ -131,6 +131,20 @@
       <h2>Histogram Before vs After</h2>
       <button id="closeHist" type="button">Tutup</button>
     </div>
+    <div class="hist-controls">
+      <label>
+        Filter channel
+        <select id="histChannelSelect">
+          <option value="all">Semua channel terdeteksi</option>
+          <option value="gray">Grayscale</option>
+          <option value="R">R / Merah</option>
+          <option value="G">G / Hijau</option>
+          <option value="B">B / Biru</option>
+          <option value="A">A / Alpha</option>
+        </select>
+      </label>
+      <div id="histLegend" class="hist-legend" aria-label="Legend histogram"></div>
+    </div>
     <canvas id="histCanvas" width="980" height="520"></canvas>
   </dialog>
 

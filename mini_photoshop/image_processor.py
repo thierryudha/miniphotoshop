@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 
 InterpolationName = Literal["nearest", "bilinear"]
+HistogramChannel = Literal["all", "gray", "R", "G", "B", "A"]
 
 
 @dataclass
@@ -319,14 +320,53 @@ def rle_compression_ratio(image: np.ndarray) -> float:
     return float(original_size / rle_size)
 
 
-def compute_histograms(image: np.ndarray) -> dict[str, np.ndarray]:
-    """Return grayscale and RGB histograms as arrays of length 256."""
+def _has_gray_rgb_channels(image: np.ndarray) -> bool:
+    """Return True when RGB channels carry identical grayscale values."""
 
-    hist = {"gray": cv2.calcHist([to_gray(image)], [0], None, [256], [0, 256]).flatten()}
-    if image.ndim == 3:
-        for idx, name in enumerate(("R", "G", "B")):
+    if image.ndim != 3 or image.shape[2] < 3:
+        return False
+    rgb = image[:, :, :3]
+    return bool(np.array_equal(rgb[:, :, 0], rgb[:, :, 1]) and np.array_equal(rgb[:, :, 1], rgb[:, :, 2]))
+
+
+def compute_histograms(image: np.ndarray) -> dict[str, np.ndarray]:
+    """Return histogram channels that match the image data.
+
+    Color images expose R/G/B and optional A histograms. Grayscale images expose
+    only ``gray`` so the UI does not draw an extra grayscale curve for normal
+    RGB/RGBA photos.
+    """
+
+    if image.ndim == 2:
+        return {"gray": cv2.calcHist([image], [0], None, [256], [0, 256]).flatten()}
+
+    if image.ndim != 3 or image.shape[2] <= 1:
+        gray = image[:, :, 0] if image.ndim == 3 else to_gray(image)
+        return {"gray": cv2.calcHist([gray], [0], None, [256], [0, 256]).flatten()}
+
+    if _has_gray_rgb_channels(image):
+        return {"gray": cv2.calcHist([image[:, :, 0]], [0], None, [256], [0, 256]).flatten()}
+
+    hist: dict[str, np.ndarray] = {}
+    for idx, name in enumerate(("R", "G", "B", "A")):
+        if idx < image.shape[2]:
             hist[name] = cv2.calcHist([image], [idx], None, [256], [0, 256]).flatten()
     return hist
+
+
+def select_histogram_channels(histograms: dict[str, np.ndarray], channel: HistogramChannel = "all") -> tuple[str, ...]:
+    """Return histogram keys to draw for a user-selected channel filter.
+
+    ``all`` keeps the stable display order used by both desktop and web UIs.
+    Single-channel filters only return the requested key when the histogram is
+    present, preventing split-channel views from drawing the two zeroed RGB
+    channels as misleading flat lines.
+    """
+
+    order = ("gray", "R", "G", "B", "A")
+    if channel == "all":
+        return tuple(name for name in order if name in histograms)
+    return (channel,) if channel in histograms else ()
 
 
 def apply_live_settings(image: np.ndarray, settings: LiveSettings) -> np.ndarray:

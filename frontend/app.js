@@ -12,6 +12,8 @@ const state = {
   cropStart: null,
   cropEnd: null,
   cropSelecting: false,
+  histogramBefore: null,
+  histogramAfter: null,
 };
 
 const el = (id) => document.getElementById(id);
@@ -429,7 +431,31 @@ async function histogramFor(blob) {
   return response.json();
 }
 
-function drawHistogram(before, after) {
+const histogramColors = { gray: '#e5e7eb', R: '#ef4444', G: '#22c55e', B: '#38bdf8', A: '#c084fc' };
+const histogramLabels = { gray: 'Gray', R: 'R / Merah', G: 'G / Hijau', B: 'B / Biru', A: 'A / Alpha' };
+
+function selectedHistogramChannel() {
+  if (state.selectedFeature?.key === 'channel_split') {
+    const channel = getParams().channel;
+    if (['R', 'G', 'B'].includes(channel)) return channel;
+  }
+  return 'all';
+}
+
+function histogramKeys(histograms, channel = 'all') {
+  const order = ['gray', 'R', 'G', 'B', 'A'];
+  if (channel === 'all') return order.filter((key) => Array.isArray(histograms[key]));
+  return Array.isArray(histograms[channel]) ? [channel] : [];
+}
+
+function updateHistogramLegend(keys) {
+  const legend = el('histLegend');
+  legend.innerHTML = keys.map((key) => (
+    `<span><i style="background:${histogramColors[key]}"></i>${histogramLabels[key] || key}</span>`
+  )).join('');
+}
+
+function drawHistogram(before, after, channel = el('histChannelSelect')?.value || 'all') {
   const canvas = el('histCanvas');
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -437,28 +463,37 @@ function drawHistogram(before, after) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = '#334155';
   ctx.lineWidth = 1;
-  for (let i = 0; i <= 8; i++) {
-    const y = 30 + i * 55;
-    ctx.beginPath();
-    ctx.moveTo(40, y);
-    ctx.lineTo(canvas.width - 20, y);
-    ctx.stroke();
+  const keys = Array.from(new Set([
+    ...histogramKeys(before.histograms, channel),
+    ...histogramKeys(after.histograms, channel),
+  ]));
+  updateHistogramLegend(keys);
+  if (!keys.length) {
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillText('Channel histogram tidak tersedia.', 40, 60);
+    return;
   }
-  // const keys = ['gray', 'R', 'G', 'B'];
-  // const colors = { gray: '#e5e7eb', R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
-  const keys = ['R', 'G', 'B'];
-  const colors = { R: '#ef4444', G: '#22c55e', B: '#38bdf8' };
   const areas = [
-    { data: before.histograms, label: 'Before', top: 35, height: 205 },
+    { data: before.histograms, label: 'Before', top: 45, height: 205 },
     { data: after.histograms, label: 'After', top: 290, height: 205 },
   ];
   for (const area of areas) {
     ctx.fillStyle = '#94a3b8';
     ctx.fillText(area.label, 46, area.top - 12);
-    const max = Math.max(...Object.values(area.data).flat());
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = area.top + i * (area.height / 4);
+      ctx.beginPath();
+      ctx.moveTo(40, y);
+      ctx.lineTo(canvas.width - 20, y);
+      ctx.stroke();
+    }
+    const values = keys.flatMap((key) => area.data[key] || []);
+    const max = Math.max(1, ...values);
     for (const key of keys) {
       if (!area.data[key]) continue;
-      ctx.strokeStyle = colors[key];
+      ctx.strokeStyle = histogramColors[key];
       ctx.beginPath();
       area.data[key].forEach((value, i) => {
         const x = 40 + (i / 255) * (canvas.width - 70);
@@ -476,7 +511,10 @@ async function showHistogram() {
   try {
     setStatus('Mengambil histogram...');
     const [before, after] = await Promise.all([histogramFor(state.originalBlob), histogramFor(currentBlob())]);
-    drawHistogram(before, after);
+    state.histogramBefore = before;
+    state.histogramAfter = after;
+    el('histChannelSelect').value = selectedHistogramChannel();
+    drawHistogram(before, after, el('histChannelSelect').value);
     el('histDialog').showModal();
     setStatus('Histogram siap.');
   } catch (error) {
@@ -545,6 +583,11 @@ el('presetSelect').addEventListener('change', (event) => {
   scheduleLivePreview();
 });
 el('closeHist').addEventListener('click', () => el('histDialog').close());
+el('histChannelSelect').addEventListener('change', () => {
+  if (state.histogramBefore && state.histogramAfter) {
+    drawHistogram(state.histogramBefore, state.histogramAfter, el('histChannelSelect').value);
+  }
+});
 el('closeCnn').addEventListener('click', () => el('cnnDialog').close());
 
 afterStage.addEventListener('pointerdown', (event) => {
