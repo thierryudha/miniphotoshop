@@ -95,6 +95,10 @@
 
       <div class="save-box">
         <label>
+          Nama File
+          <input id="saveFilename" type="text" value="hasil-edit" placeholder="Nama file..." />
+        </label>
+        <label>
           Format Save
           <select id="saveFormat">
             <option value="PNG">PNG</option>
@@ -143,6 +147,7 @@
         </select>
       </label>
       <div id="histLegend" class="hist-legend" aria-label="Legend histogram"></div>
+      <div class="hist-info"><span id="histTotalPixels"></span></div>
     </div>
     <canvas id="histCanvas" width="980" height="580"></canvas>
   </dialog>

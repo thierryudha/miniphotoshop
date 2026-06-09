@@ -10,7 +10,7 @@ Ringkasan: saya memindai kode proyek dan menilai implementasi setiap fitur yang 
 - [x] Load image (JPG, PNG, BMP) — Implemented
   - Referensi: `mini_photoshop.app: open_image`, `backend/main.py: _read_image`
 - [x] Save image (custom filename & format) — Implemented
-  - Referensi: `mini_photoshop.app: save_image`, `_save_array_to_file`; backend `/api/export` mendukung PNG/JPEG/BMP/TIFF (quality untuk JPEG)
+  - Referensi: `mini_photoshop.app: save_image`, `_save_array_to_file`; desktop sekarang menyarankan default filename cerdas; backend `/api/export` mendukung custom filename via input frontend, mendukung PNG/JPEG/BMP/TIFF (quality untuk JPEG)
 - [x] Reset ke gambar awal — Implemented (`mini_photoshop.app: reset_to_original`)
 - [x] Input: file lokal — Implemented (file dialog)
 - [x] Output: file hasil edit — Implemented (file save / export)

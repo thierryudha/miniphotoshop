@@ -413,7 +413,11 @@ async def _read_image(upload: UploadFile) -> np.ndarray:
     try:
         with Image.open(io.BytesIO(data)) as pil:
             pil.load()
-            return np.asarray(pil.convert("RGB"), dtype=np.uint8).copy()
+            # Handle RGBA explicitly if present, otherwise default to RGB
+            mode = "RGBA" if pil.mode == "RGBA" else "RGB"
+            arr = np.asarray(pil.convert(mode), dtype=np.uint8).copy()
+            print(f"[DEBUG] _read_image - mode: {pil.mode}, shape: {arr.shape}, ndim: {arr.ndim}, dtype: {arr.dtype}")
+            return arr
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Gagal membaca gambar: {exc}") from exc
 
@@ -427,9 +431,13 @@ async def _read_histogram_image(upload: UploadFile) -> np.ndarray:
             pil.load()
             if pil.mode in {"1", "L", "I", "I;16", "F"}:
                 converted = pil.convert("L")
+            elif pil.mode == "RGBA":
+                converted = pil.convert("RGBA")
             else:
                 converted = pil.convert("RGB")
-            return np.asarray(converted, dtype=np.uint8).copy()
+            arr = np.asarray(converted, dtype=np.uint8).copy()
+            print(f"[DEBUG] _read_histogram_image - mode: {pil.mode}, shape: {arr.shape}, ndim: {arr.ndim}, dtype: {arr.dtype}")
+            return arr
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Gagal membaca gambar: {exc}") from exc
 
