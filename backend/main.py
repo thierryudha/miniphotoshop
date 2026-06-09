@@ -293,7 +293,7 @@ FEATURES: list[Feature] = [
         [_control("levels", "Levels", default=8, minimum=2, maximum=32)],
         presets={"Ringan": {"levels": 16}, "Sedang": {"levels": 8}, "Kuat": {"levels": 4}},
     ),
-    _feature("rle_ratio", "RLE Compression Ratio", "Compression", "Hitung estimasi rasio kompresi RLE pada citra grayscale.", live=False),
+    _feature("rle_ratio", "RLE Compression Ratio", "Compression", "Hitung estimasi rasio kompresi RLE pada citra grayscale.", live=True),
     _feature("cnn_recognition", "CNN Object Recognition", "Machine Learning", "Klasifikasi objek opsional memakai model CNN ImageNet.", live=False),
 ]
 

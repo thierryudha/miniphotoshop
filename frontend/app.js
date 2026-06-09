@@ -159,6 +159,7 @@ function renderControls(feature) {
   if (!feature.controls.length) {
     const empty = document.createElement('p');
     empty.className = 'panel-heading';
+    empty.id = 'emptyControlsMsg';
     empty.textContent = 'Fitur ini tidak membutuhkan parameter tambahan.';
     controlsContainer.appendChild(empty);
     return;
@@ -274,6 +275,12 @@ async function processSelected(commit) {
     state.previewFeature = state.selectedFeature.key;
     updateImages();
     setStatus(message);
+    if (state.selectedFeature.key === 'rle_ratio') {
+      const msgEl = el('emptyControlsMsg');
+      if (msgEl) msgEl.innerHTML = `<span style="color:var(--accent);font-weight:bold;font-size:1.1rem;">${message}</span>`;
+      el('featureDesc').innerHTML = `<span style="color:var(--accent);font-weight:bold;">${message}</span>`;
+      if (!commit) alert(message);
+    }
     if (commit) commitPreview();
   } catch (error) {
     setStatus(error.message);
