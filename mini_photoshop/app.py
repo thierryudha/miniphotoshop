@@ -719,8 +719,15 @@ class MiniPhotoshopApp(tk.Tk):
         if image is None:
             messagebox.showwarning("Tidak Ada Gambar", "Buka gambar terlebih dahulu.")
             return
+        
+        # Default filename based on current path or generic name
+        initial_name = "hasil_edit"
+        if self.current_path:
+            initial_name = f"{self.current_path.stem}_edit"
+
         filename = filedialog.asksaveasfilename(
             title="Simpan hasil edit",
+            initialfile=initial_name,
             defaultextension=".png",
             filetypes=(("PNG", "*.png"), ("JPEG", "*.jpg *.jpeg"), ("BMP", "*.bmp"), ("TIFF", "*.tif")),
         )
@@ -1003,7 +1010,7 @@ class MiniPhotoshopApp(tk.Tk):
                 ax2.plot(xs, after_hist[name], label=name, color=colors.get(name))
 
             ax1.set_title("Before Histogram")
-            ax2.set_title("After Histogram")
+            ax2.set_title(f"After Histogram (Total: {after.shape[1] * after.shape[0]:,} px)")
             for ax in (ax1, ax2):
                 ax.set_xlim(0, 255)
                 ax.set_xlabel("Intensitas")

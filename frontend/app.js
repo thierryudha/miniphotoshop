@@ -322,6 +322,7 @@ async function exportCurrent() {
   if (!blob) return;
   const form = new FormData();
   const format = el('saveFormat').value;
+  const customName = el('saveFilename').value || 'hasil-edit';
   form.append('image', blob, 'result.png');
   form.append('image_format', format);
   form.append('quality', el('jpegQuality').value || '90');
@@ -334,9 +335,9 @@ async function exportCurrent() {
   const suffix = format.toLowerCase().replace('jpeg', 'jpg');
   const a = document.createElement('a');
   a.href = blobUrl(outBlob);
-  a.download = `mini-photoshop-result.${suffix}`;
+  a.download = `${customName}.${suffix}`;
   a.click();
-  setStatus(`File diekspor sebagai ${format}.`);
+  setStatus(`File diekspor sebagai ${customName}.${suffix}`);
 }
 
 function undo() {
@@ -522,6 +523,16 @@ function drawHistogram(before, after, channel = el('histChannelSelect')?.value |
 
     const values = keys.flatMap((key) => area.data[key] || []);
     const max = Math.max(1, ...values);
+    
+    // Y Axis Labels
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 4; i++) {
+      const val = Math.round(max - i * (max / 4));
+      const y = area.top + i * (area.height / 4);
+      ctx.fillText(val.toLocaleString(), plotLeft - 8, y + 4);
+    }
+
     for (const key of keys) {
       if (!area.data[key]) continue;
       ctx.strokeStyle = histogramColors[key];
@@ -545,6 +556,7 @@ async function showHistogram() {
     state.histogramBefore = before;
     state.histogramAfter = after;
     el('histChannelSelect').value = selectedHistogramChannel();
+    el('histTotalPixels').textContent = `Total piksel gambar: ${(after.width * after.height).toLocaleString()}`;
     drawHistogram(before, after, el('histChannelSelect').value);
     el('histDialog').showModal();
     setStatus('Histogram siap.');

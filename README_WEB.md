@@ -4,7 +4,7 @@ Versi ini memigrasikan proyek Tkinter menjadi aplikasi web:
 
 - **Backend**: FastAPI (`backend/main.py`) memakai ulang algoritma di `mini_photoshop/image_processor.py`.
 - **Frontend**: HTML/CSS/JavaScript vanilla (`frontend/`) tanpa build step Node.js.
-- **Fitur web**: load image, before/after preview, live preview, apply/cancel, undo/redo, reset, crop drag area, histogram, export PNG/JPEG/BMP/TIFF, dan endpoint CNN opsional.
+- **Fitur web**: load image, before/after preview, live preview, apply/cancel, undo/redo, reset, crop drag area, histogram (dengan total piksel dan label Y), export custom filename (PNG/JPEG/BMP/TIFF), dan endpoint CNN opsional.
 
 ## Cara Menjalankan
 

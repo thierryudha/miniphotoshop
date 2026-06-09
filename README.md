@@ -32,7 +32,7 @@ Aplikasi desktop pengolahan citra digital berbasis **Python + Tkinter**. Versi i
 - Color: RGB channel splitting, hue/saturation adjustment.
 - Segmentation: threshold segmentation, edge-based segmentation, region-based K-Means.
 - Compression: JPEG quality simulation, color quantization, RLE ratio estimation.
-- Histogram Analysis: histogram before-after dengan deteksi channel otomatis: gambar RGB menampilkan R/G/B, gambar grayscale hanya menampilkan gray, lengkap dengan filter channel; saat fitur Channel Splitting RGB aktif, grafik otomatis mengikuti channel yang dipilih.
+- Histogram Analysis: histogram before-after dengan deteksi channel otomatis: gambar RGB menampilkan R/G/B, gambar grayscale hanya menampilkan gray, lengkap dengan filter channel; saat fitur Channel Splitting RGB aktif, grafik otomatis mengikuti channel yang dipilih. Sekarang dilengkapi informasi **total piksel** dan label sumbu Y yang jelas.
 - Machine Learning: CNN object recognition opsional memakai MobileNetV2.
 
 ## Instalasi
@@ -65,15 +65,6 @@ Atau:
 run.bat
 ```
 
-## Mengaktifkan CNN Opsional
-
-Fitur CNN membutuhkan TensorFlow. Instal hanya jika diperlukan karena ukurannya besar.
-
-```bash
-pip install -r requirements-ml.txt
-```
-
-Setelah itu buka aplikasi, load gambar, lalu klik tombol **CNN** atau pilih fitur **CNN Object Recognition**.
 
 ## Cara Pakai Singkat
 
