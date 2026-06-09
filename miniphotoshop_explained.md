@@ -863,23 +863,83 @@ Debouncing 300ms mencegah terlalu banyak request ke server saat slider digeser c
 
 ---
 
-## 9. Matriks Fitur vs File vs Rumus
+## 9. Pemetaan Fitur → Kode → Materi PCD
 
-| Materi Kuliah | Fungsi | File | Rumus Kunci |
-|---|---|---|---|
-| Point Operation | `adjust_brightness_contrast` | `image_processor.py` | `g = α·f + β` |
-| Histogram Equalization | `equalize_histogram` | `image_processor.py` | CDF normalization |
-| Spatial Filter - Smoothing | `average_smoothing`, `gaussian_blur`, `median_filter` | `image_processor.py` | Konvolusi + kernel |
-| Spatial Filter - Sharpening | `sharpen`, `unsharp_mask` | `image_processor.py` | Laplacian kernel, Unsharp formula |
-| Transformasi Geometri | `affine_transform`, `resize_image`, `flip_*`, `crop` | `image_processor.py` | Matriks Affine 2×3 |
-| Deteksi Tepi | `edge_detection` (6 metode) | `image_processor.py` | ∇f, ∇²f, Canny multi-step |
-| Morfologi | `morphology` | `image_processor.py` | Erosion ⊖, Dilation ⊕ |
-| Segmentasi | `threshold_segmentation`, `edge_based_segmentation`, `region_based_segmentation` | `image_processor.py` | Thresholding, K-Means |
-| Kompresi JPEG | `simulate_jpeg` | `image_processor.py` | DCT + Quantization |
-| Kompresi Kuantisasi | `quantize_colors` | `image_processor.py` | `floor(x/step)×step` |
-| Kompresi RLE | `rle_compression_ratio` | `image_processor.py` | Run-length counting |
-| CNN / Machine Learning | `CNNRecognizer` | `ml.py` | Forward pass CNN (ImageNet) |
-| Histogram Analysis | `compute_histograms` | `image_processor.py` | Frekuensi intensitas piksel |
+Tabel ini adalah referensi cepat untuk presentasi: setiap fitur dipetakan ke fungsi spesifik di kode dan materi Pengolahan Citra Digital yang diterapkan.
+
+### BASIC
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| Brightness & Contrast | `adjust_brightness_contrast()` | **Point Operation / Transformasi Intensitas** — operasi linear `g = α·f + β` pada setiap piksel secara independen |
+| RGB → Grayscale | `rgb_to_grayscale()` → `to_gray()` | **Konversi Ruang Warna** — weighted luminance ITU-R BT.601: `Y = 0.299R + 0.587G + 0.114B` |
+| Resize / Scaling | `resize_image()` | **Transformasi Geometri + Interpolasi** — nearest neighbor dan bilinear interpolation |
+
+### ENHANCEMENT
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| Histogram Equalization | `equalize_histogram()` | **Histogram Processing** — pemerataan distribusi intensitas via CDF normalization |
+| Sharpening Fleksibel | `unsharp_mask()` | **Spatial Domain Filtering — High-pass / Sharpening** — Unsharp Masking: `sharpened = (1+amount)×original − amount×blurred` |
+| Smoothing / Average Blur | `average_smoothing()` | **Spatial Domain Filtering — Low-pass / Smoothing** — konvolusi dengan kernel rata-rata seragam |
+
+### TRANSFORM
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| Rotate / Scale / Translate | `affine_transform()` | **Transformasi Geometri — Affine Transform** — perkalian matriks 2×3 via `cv2.warpAffine` |
+| Flip Horizontal | `flip_horizontal()` | **Transformasi Geometri — Refleksi** — `g(x,y) = f(W−1−x, y)` |
+| Flip Vertical | `flip_vertical()` | **Transformasi Geometri — Refleksi** — `g(x,y) = f(x, H−1−y)` |
+
+### RESTORATION
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| Gaussian Blur | `gaussian_blur()` | **Image Restoration / Noise Reduction — Spatial Filtering** — konvolusi kernel Gaussian `G(x,y) = (1/2πσ²)·e^(-(x²+y²)/2σ²)` |
+| Median Filter | `median_filter()` | **Image Restoration — Non-linear Spatial Filtering** — order statistics filter, ambil nilai median dari window K×K |
+| Salt & Pepper Removal | `remove_salt_pepper()` → alias `median_filter()` | **Image Restoration — Impulse Noise Removal** — median filter sebagai solusi optimal untuk noise impuls |
+
+### BINARY & EDGE
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| Threshold Binary | `threshold_binary()` | **Binarisasi** — global thresholding: `g = 255 jika f > T, else 0` |
+| Edge Detection — Sobel | `edge_detection(method="Sobel")` | **Deteksi Tepi — Gradient Operator Orde 1** — turunan pertama dengan pembobotan Gaussian |
+| Edge Detection — Prewitt | `edge_detection(method="Prewitt")` | **Deteksi Tepi — Gradient Operator Orde 1** — turunan pertama, bobot seragam ±1 |
+| Edge Detection — Roberts | `edge_detection(method="Roberts")` | **Deteksi Tepi — Gradient Operator Orde 1** — gradient diagonal 2×2, operator paling sederhana |
+| Edge Detection — Laplacian | `edge_detection(method="Laplacian")` | **Deteksi Tepi — Operator Orde 2** — turunan kedua: `∇²f = ∂²f/∂x² + ∂²f/∂y²` |
+| Edge Detection — LoG | `edge_detection(method="Laplacian of Gaussian")` | **Deteksi Tepi — Laplacian of Gaussian** — Gaussian smoothing dulu lalu Laplacian: noise reduction + deteksi tepi dalam satu langkah |
+| Edge Detection — Canny | `edge_detection(method="Canny")` | **Deteksi Tepi — Optimal Edge Detector** — multi-step: smoothing → gradient → non-max suppression → double thresholding → hysteresis |
+| Morphology Erosion/Dilation | `morphology()` | **Morphological Image Processing** — operasi himpunan: erosion `f⊖b` (min), dilation `f⊕b` (max) dengan structuring element |
+
+### COLOR
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| Channel Splitting RGB | `split_channel()` | **Model Warna RGB** — dekomposisi komponen channel R, G, B secara terpisah |
+| Hue / Saturation | `adjust_hue_saturation()` | **Konversi Ruang Warna RGB → HSV** — manipulasi komponen H dan S di ruang warna HSV |
+
+### SEGMENTATION
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| Threshold Segmentation | `threshold_segmentation()` | **Segmentasi Citra — Threshold-based** — global thresholding sebagai binary mask, lalu masking ke citra asli |
+| Edge-based Segmentation | `edge_based_segmentation()` | **Segmentasi Citra — Edge-based** — Canny edge detection sebagai penanda batas region |
+| Region-based / K-Means | `region_based_segmentation()` | **Segmentasi Citra — Region-based / Clustering** — K-Means clustering di ruang warna RGB, minimasi `Σ||x_i − μ_k||²` |
+
+### COMPRESSION
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| Simulasi JPEG Quality | `simulate_jpeg()` | **Kompresi Citra Lossy — JPEG** — DCT per blok 8×8 + quantization + Huffman coding (via library) |
+| Color Quantization | `quantize_colors()` | **Kompresi Citra — Kuantisasi Warna** — reduksi level intensitas: `floor(x/step)×step + step/2` |
+| RLE Compression Ratio | `rle_compression_ratio()` | **Kompresi Citra Lossless — Run-Length Encoding** — estimasi rasio kompresi berdasarkan jumlah run pada data grayscale |
+
+### MACHINE LEARNING
+
+| Fitur | Fungsi di Kode | Materi PCD yang Diterapkan |
+|---|---|---|
+| CNN Object Recognition | `CNNRecognizer.predict()` di `ml.py` | **Machine Learning untuk Citra** — klasifikasi objek dengan CNN pre-trained ImageNet (MobileNetV2/ResNet50/EfficientNetB0/InceptionV3) |
 
 ---
 
